@@ -7,10 +7,10 @@ import (
 )
 
 type UserRepoImpl struct {
-	db database.Database
+	db database.SqlDatabase
 }
 
-func NewUserRepo(db database.Database) repository.UserRepo {
+func NewUserRepo(db database.SqlDatabase) repository.UserRepo {
 	return &UserRepoImpl{
 		db: db,
 	}

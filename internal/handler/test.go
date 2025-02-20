@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"go-service-demo/internal/repository"
 	"go-service-demo/pkg/database"
-	"go-service-demo/pkg/database/mock/repository_impl"
+	"go-service-demo/pkg/database/sql_db_mock/repository_impl"
 	"log"
 	"net/http"
 )
@@ -13,7 +13,7 @@ type GetTestHandler struct {
 	userRepo repository.UserRepo
 }
 
-func NewGetTestHandler(db database.Database) *GetTestHandler {
+func NewGetTestHandler(db database.SqlDatabase) *GetTestHandler {
 	userRepo := repository_impl.NewUserRepo(db)
 	return &GetTestHandler{
 		userRepo: userRepo,

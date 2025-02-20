@@ -1,6 +1,6 @@
 package database
 
-type Database interface {
+type SqlDatabase interface {
 	Ping() error
 	Connect() error
 	Close() error
