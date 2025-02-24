@@ -61,3 +61,12 @@ func (u *UserRepo) Save(user model.User) (model.User, error) {
 	}
 	return user, nil
 }
+
+func (u *UserRepo) DeleteById(id interface{}) error {
+	query := "DELETE FROM user WHERE id = %d"
+	_, err := u.db.Query(fmt.Sprintf(query, id))
+	if err != nil {
+		return err
+	}
+	return nil
+}

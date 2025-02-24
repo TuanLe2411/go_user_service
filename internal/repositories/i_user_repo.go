@@ -6,8 +6,7 @@ import (
 
 type IUserRepo interface {
 	Save(model.User) (model.User, error)
-	// Delete(model.User) error
-	// Insert(model.User) (model.User, error)
+	DeleteById(id interface{}) error
 	FindById(int) (model.User, error)
 	FindAll() ([]model.User, error)
 }

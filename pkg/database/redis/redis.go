@@ -55,6 +55,12 @@ func (r *RedisDatabase) Get(key string) (string, error) {
 	return r.redis.Get(ctx, key).Result()
 }
 
+func (r *RedisDatabase) Del(key string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return r.redis.Del(ctx, key).Err()
+}
+
 func (r *RedisDatabase) SaveUserToRedis(key string, user model.User) {
 	bytes, _ := json.Marshal(user)
 	err := r.Set(key, string(bytes), 300000)
