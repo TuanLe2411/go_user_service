@@ -9,10 +9,10 @@ import (
 )
 
 type UserRepo struct {
-	db database.ISqlDatabase
+	db database.IDatabase
 }
 
-func NewUserRepo(db database.ISqlDatabase) repositories.IUserRepo {
+func NewUserRepo(db database.IDatabase) repositories.IUserRepo {
 	return &UserRepo{
 		db: db,
 	}

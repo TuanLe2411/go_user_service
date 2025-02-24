@@ -12,7 +12,7 @@ type MySql struct {
 	db   *sql.DB
 }
 
-func NewMySql(conn string) database.ISqlDatabase {
+func NewMySql(conn string) database.IDatabase {
 	return &MySql{
 		conn: conn,
 	}
@@ -24,7 +24,7 @@ func (m *MySql) Connect() error {
 		return err
 	}
 	m.db = db
-	return nil
+	return m.Ping()
 }
 
 func (m *MySql) Close() error {

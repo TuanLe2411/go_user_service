@@ -2,7 +2,7 @@ package database
 
 import "database/sql"
 
-type ISqlDatabase interface {
+type IDatabase interface {
 	Ping() error
 	Connect() error
 	Close() error
