@@ -48,6 +48,10 @@ func (u *UserController) FindUserById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	if !user.IsExisted() {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
 
 	// Save user info to redis
 	u.redis.SaveUserToRedis(redis.GetUserKey(rawId), user)
@@ -61,6 +65,10 @@ func (u *UserController) FindAllUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := u.userRepo.FindAll()
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if len(users) == 0 {
+		http.Error(w, "No user found", http.StatusNotFound)
 		return
 	}
 

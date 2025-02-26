@@ -19,16 +19,17 @@ func NewUserRepo(db database.IDatabase) repositories.IUserRepo {
 }
 
 func (u *UserRepo) FindById(id int) (model.User, error) {
-	query := "SELECT id, age, name, date_of_birth FROM user WHERE id = %d"
+	query := "SELECT id, age, name, date_of_birth, username FROM user WHERE id = %d"
 	rows, err := u.db.Query(fmt.Sprintf(query, id))
-	defer rows.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
-	for rows.Next() {
+	defer rows.Close()
+
+	if rows.Next() {
 		var user model.User
-		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth); err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username); err != nil {
+			return model.User{}, err
 		}
 		return user, nil
 	}
@@ -36,17 +37,17 @@ func (u *UserRepo) FindById(id int) (model.User, error) {
 }
 
 func (u *UserRepo) FindAll() ([]model.User, error) {
-	query := "SELECT id, age, name, date_of_birth FROM user"
+	query := "SELECT id, age, name, date_of_birth, username FROM user"
 	rows, err := u.db.Query(query)
-	defer rows.Close()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
+	defer rows.Close()
 	var users []model.User
 	for rows.Next() {
 		var user model.User
-		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth); err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username); err != nil {
+			return nil, err
 		}
 		users = append(users, user)
 	}
@@ -54,11 +55,12 @@ func (u *UserRepo) FindAll() ([]model.User, error) {
 }
 
 func (u *UserRepo) Save(user model.User) (model.User, error) {
-	query := "INSERT INTO user (age, name, date_of_birth) VALUES (%d, '%s', '%s')"
-	_, err := u.db.Query(fmt.Sprintf(query, user.Age, user.Name, user.DateOfBirth))
+	query := "INSERT INTO user (age, name, date_of_birth, password, username) VALUES (%d, '%s', '%s', '%s', '%s')"
+	_, err := u.db.Query(fmt.Sprintf(query, user.Age, user.Name, user.DateOfBirth, user.Password, user.Username))
 	if err != nil {
-		log.Fatal(err)
+		return model.User{}, err
 	}
+	user.Password = ""
 	return user, nil
 }
 
@@ -69,4 +71,40 @@ func (u *UserRepo) DeleteById(id interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func (u *UserRepo) FindByUsername(username string) (model.User, error) {
+	query := "SELECT id, age, name, date_of_birth, username FROM user WHERE username = '%s'"
+	rows, err := u.db.Query(fmt.Sprintf(query, username))
+	if err != nil {
+		return model.User{}, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var user model.User
+		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username); err != nil {
+			return model.User{}, err
+		}
+		return user, nil
+	}
+	return model.User{}, nil
+}
+
+func (u *UserRepo) FindPasswordByUsername(username string) (string, error) {
+	query := "SELECT password FROM user WHERE username = '%s'"
+	rows, err := u.db.Query(fmt.Sprintf(query, username))
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var password string
+		if err := rows.Scan(&password); err != nil {
+			return "", err
+		}
+		return password, nil
+	}
+	return "", nil
 }
