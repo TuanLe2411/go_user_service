@@ -16,15 +16,16 @@ import (
 const ApiV1Prefix = "/api/v1"
 
 const UserControllerPrefix = "/users"
-const FindUserByIdUrl = "/{id}"
-const FindAllUsersUrl = ""
-const UpdateUserUrl = "/{id}"
-const DeleteUserUrl = "/{id}"
+const GetUser = ""
+const GetUsers = "/all"
+const UpdateUser = ""
+const DeleteUser = ""
 
 const AuthControllerPrefix = "/auth"
 const LoginUrl = "/login"
 const RegisterUrl = "/register"
 const LogoutUrl = "/logout"
+const RefreshTokenUrl = "/refresh_token"
 
 func InitRouter() *mux.Router {
 	sqlDb := mysql.NewMySql("root:root@tcp(localhost:3306)/go_service_demo?parseTime=true&loc=Local&charset=utf8mb4")
@@ -59,11 +60,12 @@ func InitRouter() *mux.Router {
 	authRouter.HandleFunc(LoginUrl, authController.Login).Methods(constant.PostMethod)
 	authRouter.HandleFunc(RegisterUrl, authController.Register).Methods(constant.PostMethod)
 	authRouter.HandleFunc(LogoutUrl, authController.Logout).Methods(constant.PostMethod)
+	authRouter.HandleFunc(RefreshTokenUrl, authController.RefreshToken).Methods(constant.PostMethod)
 
 	// Subrouter cho /api/v1
 	baseRouter := router.PathPrefix(ApiV1Prefix).Subrouter()
 	baseRouter.Use(
-		middleware.NewJwtMiddleware().Do,
+		middleware.NewJwtMiddleware(jwt).Do,
 	)
 
 	// Subrouter cho /api/v1/users
@@ -73,9 +75,9 @@ func InitRouter() *mux.Router {
 		middleware.NewMonitorMiddleware().Do,
 	)
 	userController := user_controller.NewUserController(sqlDb, redis)
-	userRouter.HandleFunc(FindUserByIdUrl, userController.FindUserById).Methods(constant.GetMethod)
-	userRouter.HandleFunc(FindAllUsersUrl, userController.FindAllUsers).Methods(constant.GetMethod)
-	userRouter.HandleFunc(DeleteUserUrl, userController.DeleteUser).Methods(constant.DeleteMethod)
-	userRouter.HandleFunc(UpdateUserUrl, userController.UpdateUser).Methods(constant.PutMethod)
+	userRouter.HandleFunc(GetUser, userController.GetUser).Methods(constant.GetMethod)
+	userRouter.HandleFunc(GetUsers, userController.GetUsers).Methods(constant.GetMethod)
+	userRouter.HandleFunc(DeleteUser, userController.DeleteUser).Methods(constant.DeleteMethod)
+	userRouter.HandleFunc(UpdateUser, userController.UpdateUser).Methods(constant.PutMethod)
 	return router
 }

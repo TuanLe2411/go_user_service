@@ -86,7 +86,7 @@ func (a *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Can not parse JSON", http.StatusBadRequest)
 		return
 	}
-	savedUser, err := a.userRepo.Save(user)
+	savedUser, err := a.userRepo.Insert(user)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -96,3 +96,27 @@ func (a *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthController) Logout(w http.ResponseWriter, r *http.Request) {}
+
+func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var refreshToken object.RefreshToken
+	err := json.NewDecoder(r.Body).Decode(&refreshToken)
+	if err != nil {
+		http.Error(w, "Can not parse JSON", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	isValid, claims := a.jwt.ValidateRefreshToken(refreshToken.RefreshToken)
+	if !isValid {
+		http.Error(w, "Invalid refresh token", http.StatusBadRequest)
+		return
+	}
+
+	token, err := a.jwt.GenerateAccessToken(claims.Username)
+	if err != nil {
+		http.Error(w, "Get error when generate access token", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte(token))
+}

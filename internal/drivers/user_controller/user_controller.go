@@ -26,23 +26,16 @@ func NewUserController(db database.IDatabase, redis *redis.RedisDatabase) *UserC
 	}
 }
 
-func (u *UserController) FindUserById(w http.ResponseWriter, r *http.Request) {
-	// Get user id from path
-	rawId := mux.Vars(r)["id"]
-	id, err := strconv.Atoi(rawId)
-	if err != nil {
-		http.Error(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	userInRedis, err := u.redis.Get(redis.GetUserKey(rawId))
+func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
+	username := r.Header.Get("username")
+	userInRedis, err := u.redis.Get(redis.GetUserKey(username))
 	if err == nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(userInRedis))
 		return
 	}
 
-	user, err := u.userRepo.FindById(id)
+	user, err := u.userRepo.FindByUsername(username)
 	if err != nil {
 		log.Println("Error when find user by id: " + err.Error())
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -54,14 +47,14 @@ func (u *UserController) FindUserById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save user info to redis
-	u.redis.SaveUserToRedis(redis.GetUserKey(rawId), user)
+	u.redis.SaveUserToRedis(redis.GetUserKey(username), user)
 
 	// Return user info
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
 
-func (u *UserController) FindAllUsers(w http.ResponseWriter, r *http.Request) {
+func (u *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := u.userRepo.FindAll()
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -77,38 +70,11 @@ func (u *UserController) FindAllUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
-func (u *UserController) SaveUser(w http.ResponseWriter, r *http.Request) {
-	var createUser object.CreateUser
-	err := json.NewDecoder(r.Body).Decode(&createUser)
-	if err != nil {
-		http.Error(w, "Can not parse JSON", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	user := createUser.ToUser()
-	user, err = u.userRepo.Save(user)
-	if err != nil {
-		log.Println("Error when save user: " + err.Error())
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
-}
-
 func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	// Get user id from path
-	rawId := mux.Vars(r)["id"]
-	id, err := strconv.Atoi(rawId)
-	if err != nil {
-		http.Error(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
+	username := r.Header.Get("username")
 
 	var updateUser object.UpdateUser
-	err = json.NewDecoder(r.Body).Decode(&updateUser)
+	err := json.NewDecoder(r.Body).Decode(&updateUser)
 	if err != nil {
 		http.Error(w, "Can not parse JSON", http.StatusBadRequest)
 		return
@@ -116,16 +82,16 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	user := updateUser.ToUser()
-	user.Id = id
-	user, err = u.userRepo.Save(user)
+	user.Username = username
+	err = u.userRepo.UpdateByUsername(user)
 	if err != nil {
-		log.Println("Error when save user: " + err.Error())
+		log.Println("Error when update user: " + err.Error())
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// Save user info to redis
-	u.redis.SaveUserToRedis(redis.GetUserKey(rawId), user)
+	u.redis.SaveUserToRedis(redis.GetUserKey(username), user)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)

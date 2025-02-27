@@ -62,22 +62,22 @@ func (j *Jwt) ParseRefreshToken(tokenString string) (*jwt.Token, *Claims, error)
 	return parseTokenWithKey(j.refreshSigningKey, tokenString)
 }
 
-func (j *Jwt) ValidateToken(tokenString string) bool {
-	token, _, err := j.ParseToken(tokenString)
+func (j *Jwt) ValidateToken(tokenString string) (bool, *Claims) {
+	token, claims, err := j.ParseToken(tokenString)
 	if err != nil {
-		return false
+		return false, claims
 	}
 
-	return token.Valid
+	return token.Valid, claims
 }
 
-func (j *Jwt) ValidateRefreshToken(tokenString string) bool {
-	token, _, err := j.ParseRefreshToken(tokenString)
+func (j *Jwt) ValidateRefreshToken(tokenString string) (bool, *Claims) {
+	token, claims, err := j.ParseRefreshToken(tokenString)
 	if err != nil {
-		return false
+		return false, nil
 	}
 
-	return token.Valid
+	return token.Valid, claims
 }
 
 func generateTokenWithKey(signedKey []byte, claims *Claims) (string, error) {

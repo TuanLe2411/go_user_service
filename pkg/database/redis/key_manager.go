@@ -1,5 +1,5 @@
 package redis
 
-func GetUserKey(userId string) string {
-	return "user:" + userId
+func GetUserKey(username string) string {
+	return "user:" + username
 }

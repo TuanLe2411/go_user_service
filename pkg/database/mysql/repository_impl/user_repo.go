@@ -54,7 +54,7 @@ func (u *UserRepo) FindAll() ([]model.User, error) {
 	return users, nil
 }
 
-func (u *UserRepo) Save(user model.User) (model.User, error) {
+func (u *UserRepo) Insert(user model.User) (model.User, error) {
 	query := "INSERT INTO user (age, name, date_of_birth, password, username) VALUES (%d, '%s', '%s', '%s', '%s')"
 	_, err := u.db.Query(fmt.Sprintf(query, user.Age, user.Name, user.DateOfBirth, user.Password, user.Username))
 	if err != nil {
@@ -107,4 +107,13 @@ func (u *UserRepo) FindPasswordByUsername(username string) (string, error) {
 		return password, nil
 	}
 	return "", nil
+}
+
+func (u *UserRepo) UpdateByUsername(user model.User) error {
+	query := "UPDATE user SET age = %d, name = '%s', date_of_birth = '%s' WHERE username = '%s'"
+	_, err := u.db.Query(fmt.Sprintf(query, user.Age, user.Name, user.DateOfBirth, user.Username))
+	if err != nil {
+		return err
+	}
+	return nil
 }
