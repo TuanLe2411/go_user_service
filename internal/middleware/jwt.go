@@ -7,29 +7,29 @@ import (
 )
 
 type JwtMiddleware struct {
-	jwt *utils.Jwt
+	*utils.Jwt
 }
 
 func NewJwtMiddleware(jwt *utils.Jwt) constant.Middleware {
 	return &JwtMiddleware{
-		jwt: jwt,
+		jwt,
 	}
 }
 
 func (j *JwtMiddleware) Do(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get token from header
 		token := r.Header.Get("Authorization")
 		if token == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			utils.SetHttpReponseError(r, utils.ErrUnAuthorized)
 			return
 		}
 		token = token[len("Bearer "):]
-		isValid, claims := j.jwt.ValidateToken(token)
+		isValid, claims := j.ValidateToken(token)
 		if !isValid {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			utils.SetHttpReponseError(r, utils.ErrUnAuthorized)
 			return
 		}
+
 		r.Header.Set("username", claims.Username)
 		next.ServeHTTP(w, r)
 	})

@@ -7,11 +7,9 @@ import (
 	"go-service-demo/pkg/database/mysql/repository_impl"
 	"go-service-demo/pkg/database/redis"
 	"go-service-demo/pkg/object"
+	"go-service-demo/pkg/utils"
 	"log"
 	"net/http"
-	"strconv"
-
-	"github.com/gorilla/mux"
 )
 
 type UserController struct {
@@ -37,12 +35,8 @@ func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := u.userRepo.FindByUsername(username)
 	if err != nil {
-		log.Println("Error when find user by id: " + err.Error())
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	if !user.IsExisted() {
-		http.Error(w, "User not found", http.StatusNotFound)
+		log.Println("Error when find user by username: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
 
@@ -57,11 +51,13 @@ func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
 func (u *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := u.userRepo.FindAll()
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Println("Error when find all users: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
 	if len(users) == 0 {
-		http.Error(w, "No user found", http.StatusNotFound)
+		log.Println("No user found")
+		utils.SetHttpReponseError(r, utils.ErrNotFound)
 		return
 	}
 
@@ -76,7 +72,8 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	var updateUser object.UpdateUser
 	err := json.NewDecoder(r.Body).Decode(&updateUser)
 	if err != nil {
-		http.Error(w, "Can not parse JSON", http.StatusBadRequest)
+		log.Println("Error when parse JSON: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrBadRequest)
 		return
 	}
 	defer r.Body.Close()
@@ -86,7 +83,7 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	err = u.userRepo.UpdateByUsername(user)
 	if err != nil {
 		log.Println("Error when update user: " + err.Error())
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
 
@@ -98,23 +95,17 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	// Get user id from path
-	rawId := mux.Vars(r)["id"]
-	id, err := strconv.Atoi(rawId)
-	if err != nil {
-		http.Error(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
+	username := r.Header.Get("username")
 
-	err = u.userRepo.DeleteById(id)
+	err := u.userRepo.DeleteByUsername(username)
 	if err != nil {
 		log.Println("Error when delete user: " + err.Error())
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
 
 	// Delete user info in redis
-	err = u.redis.Del(redis.GetUserKey(rawId))
+	err = u.redis.Del(redis.GetUserKey(username))
 	if err != nil {
 		log.Println("Error when delete user in redis: " + err.Error())
 	}

@@ -6,8 +6,7 @@ import (
 
 type IUserRepo interface {
 	Insert(model.User) (model.User, error)
-	DeleteById(id interface{}) error
-	FindById(int) (model.User, error)
+	DeleteByUsername(string) error
 	FindByUsername(string) (model.User, error)
 	FindAll() ([]model.User, error)
 	FindPasswordByUsername(string) (string, error)

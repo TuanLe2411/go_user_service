@@ -5,7 +5,6 @@ import (
 	"go-service-demo/internal/model"
 	"go-service-demo/internal/repositories"
 	"go-service-demo/pkg/database"
-	"log"
 )
 
 type UserRepo struct {
@@ -16,24 +15,6 @@ func NewUserRepo(db database.IDatabase) repositories.IUserRepo {
 	return &UserRepo{
 		db: db,
 	}
-}
-
-func (u *UserRepo) FindById(id int) (model.User, error) {
-	query := "SELECT id, age, name, date_of_birth, username FROM user WHERE id = %d"
-	rows, err := u.db.Query(fmt.Sprintf(query, id))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
-	if rows.Next() {
-		var user model.User
-		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username); err != nil {
-			return model.User{}, err
-		}
-		return user, nil
-	}
-	return model.User{}, nil
 }
 
 func (u *UserRepo) FindAll() ([]model.User, error) {
@@ -64,9 +45,9 @@ func (u *UserRepo) Insert(user model.User) (model.User, error) {
 	return user, nil
 }
 
-func (u *UserRepo) DeleteById(id interface{}) error {
-	query := "DELETE FROM user WHERE id = %d"
-	_, err := u.db.Query(fmt.Sprintf(query, id))
+func (u *UserRepo) DeleteByUsername(username string) error {
+	query := "DELETE FROM user WHERE username = %s"
+	_, err := u.db.Query(fmt.Sprintf(query, username))
 	if err != nil {
 		return err
 	}
@@ -74,7 +55,7 @@ func (u *UserRepo) DeleteById(id interface{}) error {
 }
 
 func (u *UserRepo) FindByUsername(username string) (model.User, error) {
-	query := "SELECT id, age, name, date_of_birth, username FROM user WHERE username = '%s'"
+	query := "SELECT id, age, name, date_of_birth, username, is_verified FROM user WHERE username = '%s'"
 	rows, err := u.db.Query(fmt.Sprintf(query, username))
 	if err != nil {
 		return model.User{}, err
@@ -83,7 +64,7 @@ func (u *UserRepo) FindByUsername(username string) (model.User, error) {
 
 	if rows.Next() {
 		var user model.User
-		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username); err != nil {
+		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username, &user.IsVerified); err != nil {
 			return model.User{}, err
 		}
 		return user, nil

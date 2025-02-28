@@ -7,6 +7,7 @@ import (
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database/mysql"
 	"go-service-demo/pkg/database/redis"
+	"go-service-demo/pkg/messaging_system"
 	"go-service-demo/pkg/utils"
 	"log"
 
@@ -26,6 +27,7 @@ const LoginUrl = "/login"
 const RegisterUrl = "/register"
 const LogoutUrl = "/logout"
 const RefreshTokenUrl = "/refresh_token"
+const verifyUserUrl = "/verify_user"
 
 func InitRouter() *mux.Router {
 	sqlDb := mysql.NewMySql("root:root@tcp(localhost:3306)/go_service_demo?parseTime=true&loc=Local&charset=utf8mb4")
@@ -51,16 +53,26 @@ func InitRouter() *mux.Router {
 		7*86400,
 	)
 
+	rabbitMq := messaging_system.NewRabbitMq()
+	log.Println("Connect to rabbitmq successfully")
+
 	router := mux.NewRouter()
+
+	// Middleware cho toàn bộ router
+	router.Use(
+		middleware.NewMonitorMiddleware().Do,
+		middleware.ErrorHandlerMiddleware,
+	)
 
 	// Subrouter cho /auth
 	authRouter := router.PathPrefix(AuthControllerPrefix).Subrouter()
 	authRouter.Use()
-	authController := auth_controller.NewAuthController(sqlDb, jwt)
+	authController := auth_controller.NewAuthController(sqlDb, jwt, rabbitMq)
 	authRouter.HandleFunc(LoginUrl, authController.Login).Methods(constant.PostMethod)
 	authRouter.HandleFunc(RegisterUrl, authController.Register).Methods(constant.PostMethod)
 	authRouter.HandleFunc(LogoutUrl, authController.Logout).Methods(constant.PostMethod)
 	authRouter.HandleFunc(RefreshTokenUrl, authController.RefreshToken).Methods(constant.PostMethod)
+	authRouter.HandleFunc(verifyUserUrl, authController.VerifyUser).Methods(constant.GetMethod)
 
 	// Subrouter cho /api/v1
 	baseRouter := router.PathPrefix(ApiV1Prefix).Subrouter()
@@ -70,10 +82,6 @@ func InitRouter() *mux.Router {
 
 	// Subrouter cho /api/v1/users
 	userRouter := baseRouter.PathPrefix(UserControllerPrefix).Subrouter()
-	userRouter.Use(
-		middleware.NewTrackingMiddleware().Do,
-		middleware.NewMonitorMiddleware().Do,
-	)
 	userController := user_controller.NewUserController(sqlDb, redis)
 	userRouter.HandleFunc(GetUser, userController.GetUser).Methods(constant.GetMethod)
 	userRouter.HandleFunc(GetUsers, userController.GetUsers).Methods(constant.GetMethod)
