@@ -10,6 +10,7 @@ import (
 	"go-service-demo/pkg/messaging_system"
 	"go-service-demo/pkg/utils"
 	"log"
+	"os"
 
 	"github.com/gorilla/mux"
 )
@@ -30,7 +31,9 @@ const RefreshTokenUrl = "/refresh_token"
 const verifyUserUrl = "/verify_user"
 
 func InitRouter() *mux.Router {
-	sqlDb := mysql.NewMySql("root:root@tcp(localhost:3306)/go_service_demo?parseTime=true&loc=Local&charset=utf8mb4")
+	utils.LoadConfig()
+
+	sqlDb := mysql.NewMySql()
 	err := sqlDb.Connect()
 	if err != nil {
 		log.Println("Error when connect to db: " + err.Error())
@@ -47,8 +50,8 @@ func InitRouter() *mux.Router {
 	log.Println("Connect to redis successfully")
 
 	jwt := utils.NewJwt(
-		"token_secret",
-		"refresh_token_secret",
+		os.Getenv("JWT_ACCESS_TOKEN_SECRET"),
+		os.Getenv("JWT_REFRESH_TOKEN_SECRET"),
 		300,
 		7*86400,
 	)

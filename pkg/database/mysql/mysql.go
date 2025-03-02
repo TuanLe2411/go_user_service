@@ -3,8 +3,11 @@ package mysql
 import (
 	"database/sql"
 	"go-service-demo/pkg/database"
+	"os"
+	"strconv"
+	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 )
 
 type MySql struct {
@@ -12,9 +15,18 @@ type MySql struct {
 	db   *sql.DB
 }
 
-func NewMySql(conn string) database.IDatabase {
+func NewMySql() database.IDatabase {
+	config := mysql.Config{
+		User:      os.Getenv("MYSQL_USER"),
+		Passwd:    os.Getenv("MYSQL_PASSWORD"),
+		Net:       "tcp",
+		Addr:      os.Getenv("MYSQL_URL"),
+		DBName:    os.Getenv("MYSQL_DB"),
+		Loc:       time.Local,
+		ParseTime: true,
+	}
 	return &MySql{
-		conn: conn,
+		conn: config.FormatDSN(),
 	}
 }
 
@@ -24,6 +36,12 @@ func (m *MySql) Connect() error {
 		return err
 	}
 	m.db = db
+	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetConnMaxIdleTime(time.Minute * 3)
+	maxOpenCons, _ := strconv.Atoi(os.Getenv("MYSQL_POOL_MAX_OPEN_CONNECTION"))
+	maxIdConst, _ := strconv.Atoi(os.Getenv("MYSQL_POOL_MAX_IDLE_CONNECTION"))
+	db.SetMaxIdleConns(maxIdConst)
+	db.SetMaxOpenConns(maxOpenCons)
 	return m.Ping()
 }
 

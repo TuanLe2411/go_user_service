@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"go-service-demo/internal/model"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -19,10 +21,11 @@ func NewRedisClient() *RedisDatabase {
 }
 
 func (r *RedisDatabase) Connect() error {
+	db, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
+		Addr:     os.Getenv("REDIS_URL"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       db,
 	})
 
 	r.redis = rdb
