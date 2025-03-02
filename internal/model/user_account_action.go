@@ -7,7 +7,7 @@ import (
 
 type UserAccountAction struct {
 	ID        int                 `json:"id"`
-	UserID    int                 `json:"userId"`
+	Username  string              `json:"username"`
 	Action    constant.UserAction `json:"action"`
 	CreatedAt time.Time           `json:"createdAt"`
 	RequestID string              `json:"requestId"`

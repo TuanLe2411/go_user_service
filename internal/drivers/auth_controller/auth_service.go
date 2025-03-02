@@ -6,6 +6,8 @@ import (
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/messaging_system"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type AuthService struct {
@@ -13,11 +15,12 @@ type AuthService struct {
 }
 
 func (a *AuthService) CreateVerifyRequest(user model.User) {
+	id, _ := uuid.NewUUID()
 	verifyRequest := model.UserAccountAction{
-		UserID:    user.Id,
+		Username:  user.Username,
 		Action:    constant.UserVerifyAction,
 		CreatedAt: time.Now(),
-		RequestID: "",
+		RequestID: id.String(),
 	}
 	rawData, err := json.Marshal(verifyRequest)
 	if err != nil {

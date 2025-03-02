@@ -46,13 +46,17 @@ func (r *RabbitMQ) init() error {
 		return err
 	}
 
+	args := amqp.Table{
+		"x-message-ttl": int32(5000),
+		"x-max-length":  int32(500),
+	}
 	queue, err := channel.QueueDeclare(
 		os.Getenv("RABBITMQ_QUEUE_NAME"),
 		false,
 		false,
 		true,
 		false,
-		nil,
+		args,
 	)
 	if err != nil {
 		return err
@@ -88,10 +92,13 @@ func (r *RabbitMQ) PublishWithCtx(msg []byte) error {
 			ContentType:  "text/plain",
 			Body:         msg,
 			DeliveryMode: amqp.Persistent,
+			Expiration:   "5000",
 		},
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error when publish message: " + string(msg) + " ,err: " + err.Error())
+		return err
 	}
+	log.Println("Publish message successfully, message: " + string(msg))
 	return nil
 }
