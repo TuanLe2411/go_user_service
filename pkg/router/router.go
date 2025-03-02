@@ -11,6 +11,7 @@ import (
 	"go-service-demo/pkg/utils"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -49,14 +50,26 @@ func InitRouter() *mux.Router {
 	}
 	log.Println("Connect to redis successfully")
 
+	jwtAccessTokenTtl, _ := strconv.Atoi(os.Getenv("JWT_ACCESS_TOKEN_TTL_S"))
+	jwtRefreshTokenTtl, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_TOKEN_TTL_S"))
 	jwt := utils.NewJwt(
 		os.Getenv("JWT_ACCESS_TOKEN_SECRET"),
 		os.Getenv("JWT_REFRESH_TOKEN_SECRET"),
-		300,
-		7*86400,
+		jwtAccessTokenTtl,
+		jwtRefreshTokenTtl,
 	)
 
-	rabbitMq := messaging_system.NewRabbitMq()
+	rabbitMq := &messaging_system.RabbitMQ{
+		Url:      os.Getenv("RABBITMQ_URL"),
+		Protocol: os.Getenv("RABBITMQ_PROTOCOL"),
+		Username: os.Getenv("RABBITMQ_USERNAME"),
+		Password: os.Getenv("RABBITMQ_PASSWORD"),
+	}
+	err = rabbitMq.Connect()
+	if err != nil {
+		log.Println("Error when connect to rabbitmq: " + err.Error())
+		panic(err)
+	}
 	log.Println("Connect to rabbitmq successfully")
 
 	router := mux.NewRouter()

@@ -7,6 +7,7 @@ require github.com/go-sql-driver/mysql v1.9.0
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 )
 
 require (

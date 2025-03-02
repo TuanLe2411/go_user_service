@@ -23,5 +23,5 @@ func (a *AuthService) CreateVerifyRequest(user model.User) {
 	if err != nil {
 		return
 	}
-	a.rabbitMq.Publish(constant.UserActionQueueName, string(rawData))
+	a.rabbitMq.PublishWithCtx(rawData)
 }

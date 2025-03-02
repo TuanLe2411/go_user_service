@@ -12,8 +12,3 @@ const AppErrorContextKey contextKey = "appError"
 const (
 	UserVerifyAction UserAction = "user_verify"
 )
-
-// RabbitMQ
-const UserActionQueueName string = "user_action"
-const UserActionExchangeName string = "user_action_exchange"
-const UserActionRoutingKey string = "user_action_routing_key"
