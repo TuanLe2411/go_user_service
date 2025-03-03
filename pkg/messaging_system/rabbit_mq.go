@@ -47,14 +47,13 @@ func (r *RabbitMQ) init() error {
 	}
 
 	args := amqp.Table{
-		"x-message-ttl": int32(5000),
-		"x-max-length":  int32(500),
+		"x-max-length": int32(500),
 	}
 	queue, err := channel.QueueDeclare(
 		os.Getenv("RABBITMQ_QUEUE_NAME"),
-		false,
-		false,
 		true,
+		false,
+		false,
 		false,
 		args,
 	)
@@ -75,7 +74,8 @@ func (r *RabbitMQ) init() error {
 func (r *RabbitMQ) Publish(msg []byte) error {
 	ch, err := r.conn.Channel()
 	if err != nil {
-
+		log.Println("Error creating channel: " + err.Error())
+		return err
 	}
 	defer ch.Close()
 
@@ -85,7 +85,7 @@ func (r *RabbitMQ) Publish(msg []byte) error {
 	err = ch.PublishWithContext(
 		ctx,
 		os.Getenv("RABBITMQ_EXCHANGE_NAME"),
-		os.Getenv("RABBITMQ_QUEUE_NAME"),
+		os.Getenv("RABBITMQ_ROUTING_KEY"),
 		false,
 		false,
 		amqp.Publishing{

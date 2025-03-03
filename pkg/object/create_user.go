@@ -6,6 +6,7 @@ type CreateUser struct {
 	Name        string
 	Age         int
 	DateOfBirth string
+	Email       string
 }
 
 func (c CreateUser) ToUser() model.User {
@@ -13,5 +14,6 @@ func (c CreateUser) ToUser() model.User {
 		Name:        c.Name,
 		Age:         c.Age,
 		DateOfBirth: c.DateOfBirth,
+		Email:       c.Email,
 	}
 }

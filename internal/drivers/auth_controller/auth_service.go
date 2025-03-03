@@ -26,6 +26,7 @@ func (a *AuthService) createVerifyRequest(user model.User) model.UserAccountActi
 		Action:    constant.UserVerifyAction,
 		CreatedAt: time.Now(),
 		RequestID: id.String(),
+		Email:     user.Email,
 	}
 }
 

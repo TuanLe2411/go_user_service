@@ -8,6 +8,7 @@ import (
 type RegisterUser struct {
 	Username string     `json:"username"`
 	Password string     `json:"password"`
+	Email    string     `json:"email"`
 	UserInfo CreateUser `json:"userInfo"`
 }
 
@@ -22,5 +23,6 @@ func (r RegisterUser) ToUser() (model.User, error) {
 		Name:        r.UserInfo.Name,
 		Age:         r.UserInfo.Age,
 		DateOfBirth: r.UserInfo.DateOfBirth,
+		Email:       r.Email,
 	}, nil
 }

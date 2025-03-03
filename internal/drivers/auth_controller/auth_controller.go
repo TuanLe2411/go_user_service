@@ -2,7 +2,6 @@ package auth_controller
 
 import (
 	"encoding/json"
-	"fmt"
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database"
 	"go-service-demo/pkg/database/mysql/repository_impl"
@@ -158,14 +157,12 @@ func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
-	fmt.Println("token: ", token)
 	if len(token) == 0 {
 		log.Println("Token is empty")
 		utils.SetHttpReponseError(r, utils.ErrBadRequest)
 		return
 	}
 	userAccountAction, err := a.userAccountActionRepo.FindByRequestId(token)
-	fmt.Println("userAccountAction: ", userAccountAction)
 	if err != nil {
 		log.Println("Error when find user account action by request id: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
@@ -183,7 +180,6 @@ func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := a.userRepo.FindByUsername(userAccountAction.Username)
-	fmt.Println("user: ", user)
 	if err != nil {
 		log.Println("Error when find user by username: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
@@ -196,11 +192,11 @@ func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.IsVerified = true
-	err = a.userRepo.UpdateByUsername(user)
+	err = a.userRepo.VerifyUserByUsername(user.Username)
 	if err != nil {
 		log.Println("Error when update user: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
-	w.Write([]byte("User is verified scuccessfully"))
+	w.Write([]byte("User is verified successfully"))
 }

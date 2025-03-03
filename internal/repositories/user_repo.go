@@ -11,4 +11,5 @@ type UserRepo interface {
 	FindAll() ([]model.User, error)
 	FindPasswordByUsername(string) (string, error)
 	UpdateByUsername(model.User) error
+	VerifyUserByUsername(string) error
 }

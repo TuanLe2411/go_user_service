@@ -1,6 +1,7 @@
-package router
+package driver
 
 import (
+	"fmt"
 	"go-service-demo/internal/drivers/auth_controller"
 	"go-service-demo/internal/drivers/user_controller"
 	"go-service-demo/internal/middleware"
@@ -11,28 +12,29 @@ import (
 	"go-service-demo/pkg/messaging_system"
 	"go-service-demo/pkg/utils"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
-const ApiV1Prefix = "/api/v1"
+const apiV1Prefix = "/api/v1"
 
-const UserControllerPrefix = "/users"
-const GetUser = ""
-const GetUsers = "/all"
-const UpdateUser = ""
-const DeleteUser = ""
+const userControllerPrefix = "/users"
+const getUser = ""
+const getUsers = "/all"
+const updateUser = ""
+const deleteUser = ""
 
-const AuthControllerPrefix = "/auth"
-const LoginUrl = "/login"
-const RegisterUrl = "/register"
-const LogoutUrl = "/logout"
-const RefreshTokenUrl = "/refresh_token"
+const authControllerPrefix = "/auth"
+const loginUrl = "/login"
+const registerUrl = "/register"
+const logoutUrl = "/logout"
+const refreshTokenUrl = "/refresh_token"
 const verifyUserUrl = "/verify_user"
 
-func InitRouter() *mux.Router {
+func Run() {
 	pkg.LoadConfig()
 	sqlDb := mysql.NewMySql()
 	err := sqlDb.Connect()
@@ -81,27 +83,29 @@ func InitRouter() *mux.Router {
 	)
 
 	// Subrouter cho /auth
-	authRouter := router.PathPrefix(AuthControllerPrefix).Subrouter()
+	authRouter := router.PathPrefix(authControllerPrefix).Subrouter()
 	authRouter.Use()
 	authController := auth_controller.NewAuthController(sqlDb, jwt, rabbitMq)
-	authRouter.HandleFunc(LoginUrl, authController.Login).Methods(constant.PostMethod)
-	authRouter.HandleFunc(RegisterUrl, authController.Register).Methods(constant.PostMethod)
-	authRouter.HandleFunc(LogoutUrl, authController.Logout).Methods(constant.PostMethod)
-	authRouter.HandleFunc(RefreshTokenUrl, authController.RefreshToken).Methods(constant.PostMethod)
+	authRouter.HandleFunc(loginUrl, authController.Login).Methods(constant.PostMethod)
+	authRouter.HandleFunc(registerUrl, authController.Register).Methods(constant.PostMethod)
+	authRouter.HandleFunc(logoutUrl, authController.Logout).Methods(constant.PostMethod)
+	authRouter.HandleFunc(refreshTokenUrl, authController.RefreshToken).Methods(constant.PostMethod)
 	authRouter.HandleFunc(verifyUserUrl, authController.VerifyUser).Methods(constant.GetMethod)
 
 	// Subrouter cho /api/v1
-	baseRouter := router.PathPrefix(ApiV1Prefix).Subrouter()
+	baseRouter := router.PathPrefix(apiV1Prefix).Subrouter()
 	baseRouter.Use(
 		middleware.NewJwtMiddleware(jwt).Do,
 	)
 
 	// Subrouter cho /api/v1/users
-	userRouter := baseRouter.PathPrefix(UserControllerPrefix).Subrouter()
+	userRouter := baseRouter.PathPrefix(userControllerPrefix).Subrouter()
 	userController := user_controller.NewUserController(sqlDb, redis)
-	userRouter.HandleFunc(GetUser, userController.GetUser).Methods(constant.GetMethod)
-	userRouter.HandleFunc(GetUsers, userController.GetUsers).Methods(constant.GetMethod)
-	userRouter.HandleFunc(DeleteUser, userController.DeleteUser).Methods(constant.DeleteMethod)
-	userRouter.HandleFunc(UpdateUser, userController.UpdateUser).Methods(constant.PutMethod)
-	return router
+	userRouter.HandleFunc(getUser, userController.GetUser).Methods(constant.GetMethod)
+	userRouter.HandleFunc(getUsers, userController.GetUsers).Methods(constant.GetMethod)
+	userRouter.HandleFunc(deleteUser, userController.DeleteUser).Methods(constant.DeleteMethod)
+	userRouter.HandleFunc(updateUser, userController.UpdateUser).Methods(constant.PutMethod)
+
+	fmt.Println("Server is running on port: " + os.Getenv("SERVER_PORT"))
+	http.ListenAndServe(":"+os.Getenv("SERVER_PORT"), router)
 }

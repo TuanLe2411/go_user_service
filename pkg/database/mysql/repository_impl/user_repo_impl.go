@@ -17,7 +17,7 @@ func NewUserRepo(db database.Database) repositories.UserRepo {
 }
 
 func (u *UserRepoImpl) FindAll() ([]model.User, error) {
-	query := "SELECT id, age, name, date_of_birth, username FROM user"
+	query := "SELECT id, age, name, date_of_birth, username, email FROM user where is_verified = true"
 	rows, err := u.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (u *UserRepoImpl) FindAll() ([]model.User, error) {
 	var users []model.User
 	for rows.Next() {
 		var user model.User
-		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username); err != nil {
+		if err := rows.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username, &user.Email); err != nil {
 			return nil, err
 		}
 		users = append(users, user)
@@ -35,8 +35,8 @@ func (u *UserRepoImpl) FindAll() ([]model.User, error) {
 }
 
 func (u *UserRepoImpl) Insert(user model.User) error {
-	query := "INSERT INTO user (age, name, date_of_birth, password, username) VALUES (?, ?, ?, ?, ?)"
-	_, err := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.Password, user.Username)
+	query := "INSERT INTO user (age, name, date_of_birth, password, username, email) VALUES (?, ?, ?, ?, ?, ?)"
+	_, err := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.Password, user.Username, user.Email)
 	return err
 }
 
@@ -50,14 +50,14 @@ func (u *UserRepoImpl) DeleteByUsername(username string) error {
 }
 
 func (u *UserRepoImpl) FindByUsername(username string) (model.User, error) {
-	query := "SELECT id, age, name, date_of_birth, username, is_verified FROM user WHERE username = ?"
+	query := "SELECT id, age, name, date_of_birth, username, is_verified, email FROM user WHERE username = ?"
 	row, err := u.db.QueryRow(query, username)
 	if err != nil {
 		return model.User{}, err
 	}
 	var user model.User
-	if err := row.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username, &user.IsVerified); err != nil {
-		return model.User{}, err
+	if err := row.Scan(&user.Id, &user.Age, &user.Name, &user.DateOfBirth, &user.Username, &user.IsVerified, &user.Email); err != nil {
+		return model.User{}, nil
 	}
 	return user, nil
 
@@ -77,10 +77,16 @@ func (u *UserRepoImpl) FindPasswordByUsername(username string) (string, error) {
 }
 
 func (u *UserRepoImpl) UpdateByUsername(user model.User) error {
-	query := "UPDATE user SET age = ?, name = ?, date_of_birth = ?, is_verified = ? WHERE username = ?"
-	_, err := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.IsVerified, user.Username)
+	query := "UPDATE user SET age = ?, name = ?, date_of_birth = ?, email = ? WHERE username = ?"
+	_, err := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.Email, user.Username)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (u *UserRepoImpl) VerifyUserByUsername(username string) error {
+	query := "UPDATE user SET is_verified = true WHERE username = ?"
+	_, err := u.db.Exec(query, username)
+	return err
 }

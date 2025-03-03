@@ -11,6 +11,7 @@ type UserAccountAction struct {
 	Action    constant.UserAction `json:"action"`
 	CreatedAt time.Time           `json:"createdAt"`
 	RequestID string              `json:"requestId"`
+	Email     string              `json:"email"`
 }
 
 func (u UserAccountAction) IsExisted() bool {
