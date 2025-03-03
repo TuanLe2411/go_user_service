@@ -11,5 +11,5 @@ type User struct {
 }
 
 func (u User) IsExisted() bool {
-	return u.Id > 0
+	return len(u.Username) > 0
 }

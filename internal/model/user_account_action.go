@@ -12,3 +12,7 @@ type UserAccountAction struct {
 	CreatedAt time.Time           `json:"createdAt"`
 	RequestID string              `json:"requestId"`
 }
+
+func (u UserAccountAction) IsExisted() bool {
+	return len(u.Username) > 0
+}

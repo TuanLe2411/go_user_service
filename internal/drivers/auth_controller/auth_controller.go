@@ -2,7 +2,8 @@ package auth_controller
 
 import (
 	"encoding/json"
-	"go-service-demo/internal/repositories"
+	"fmt"
+	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database"
 	"go-service-demo/pkg/database/mysql/repository_impl"
 	"go-service-demo/pkg/messaging_system"
@@ -13,17 +14,16 @@ import (
 )
 
 type AuthController struct {
-	userRepo repositories.IUserRepo
-	jwt      *utils.Jwt
 	*AuthService
 }
 
-func NewAuthController(db database.IDatabase, jwt *utils.Jwt, rabbitMq *messaging_system.RabbitMQ) *AuthController {
+func NewAuthController(db database.Database, jwt *utils.Jwt, rabbitMq *messaging_system.RabbitMQ) *AuthController {
 	return &AuthController{
-		userRepo: repository_impl.NewUserRepo(db),
-		jwt:      jwt,
 		AuthService: &AuthService{
-			rabbitMq: rabbitMq,
+			rabbitMq:              rabbitMq,
+			userRepo:              repository_impl.NewUserRepo(db),
+			userAccountActionRepo: repository_impl.NewUserAccountActionRepoImpl(db),
+			jwt:                   jwt,
 		},
 	}
 }
@@ -105,16 +105,26 @@ func (a *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		utils.SetHttpReponseError(r, utils.ErrBadRequest)
 		return
 	}
-	savedUser, err := a.userRepo.Insert(user)
+
+	verifyRequest := a.createVerifyRequest(user)
+	err = a.userAccountActionRepo.Insert(verifyRequest)
+	if err != nil {
+		log.Println("Error when insert verify request: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrServerError)
+		return
+	}
+
+	err = a.userRepo.Insert(user)
 	if err != nil {
 		log.Println("Error when insert user: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
+	user.Password = ""
 
-	go a.CreateVerifyRequest(savedUser)
+	go a.sendToMessagingSystem(verifyRequest)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(savedUser)
+	json.NewEncoder(w).Encode(user)
 }
 
 func (a *AuthController) Logout(w http.ResponseWriter, r *http.Request) {}
@@ -147,5 +157,50 @@ func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Verify user"))
+	token := r.URL.Query().Get("token")
+	fmt.Println("token: ", token)
+	if len(token) == 0 {
+		log.Println("Token is empty")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		return
+	}
+	userAccountAction, err := a.userAccountActionRepo.FindByRequestId(token)
+	fmt.Println("userAccountAction: ", userAccountAction)
+	if err != nil {
+		log.Println("Error when find user account action by request id: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrServerError)
+		return
+	}
+	if !userAccountAction.IsExisted() {
+		log.Println("User account action is not existed")
+		utils.SetHttpReponseError(r, utils.ErrNotFound)
+		return
+	}
+	if userAccountAction.Action != constant.UserVerifyAction {
+		log.Println("Invalid action")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		return
+	}
+
+	user, err := a.userRepo.FindByUsername(userAccountAction.Username)
+	fmt.Println("user: ", user)
+	if err != nil {
+		log.Println("Error when find user by username: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrServerError)
+		return
+	}
+	if user.IsVerified {
+		log.Println("User is already verified")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		return
+	}
+
+	user.IsVerified = true
+	err = a.userRepo.UpdateByUsername(user)
+	if err != nil {
+		log.Println("Error when update user: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrServerError)
+		return
+	}
+	w.Write([]byte("User is verified scuccessfully"))
 }

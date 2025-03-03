@@ -4,6 +4,7 @@ import (
 	"go-service-demo/internal/drivers/auth_controller"
 	"go-service-demo/internal/drivers/user_controller"
 	"go-service-demo/internal/middleware"
+	"go-service-demo/pkg"
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database/mysql"
 	"go-service-demo/pkg/database/redis"
@@ -32,8 +33,7 @@ const RefreshTokenUrl = "/refresh_token"
 const verifyUserUrl = "/verify_user"
 
 func InitRouter() *mux.Router {
-	utils.LoadConfig()
-
+	pkg.LoadConfig()
 	sqlDb := mysql.NewMySql()
 	err := sqlDb.Connect()
 	if err != nil {

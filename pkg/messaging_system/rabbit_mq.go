@@ -72,7 +72,7 @@ func (r *RabbitMQ) init() error {
 	return err
 }
 
-func (r *RabbitMQ) PublishWithCtx(msg []byte) error {
+func (r *RabbitMQ) Publish(msg []byte) error {
 	ch, err := r.conn.Channel()
 	if err != nil {
 

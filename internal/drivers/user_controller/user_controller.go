@@ -13,11 +13,11 @@ import (
 )
 
 type UserController struct {
-	userRepo repositories.IUserRepo
+	userRepo repositories.UserRepo
 	redis    *redis.RedisDatabase
 }
 
-func NewUserController(db database.IDatabase, redis *redis.RedisDatabase) *UserController {
+func NewUserController(db database.Database, redis *redis.RedisDatabase) *UserController {
 	return &UserController{
 		userRepo: repository_impl.NewUserRepo(db),
 		redis:    redis,

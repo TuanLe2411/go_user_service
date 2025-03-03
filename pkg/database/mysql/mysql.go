@@ -15,7 +15,7 @@ type MySql struct {
 	db   *sql.DB
 }
 
-func NewMySql() database.IDatabase {
+func NewMySql() database.Database {
 	config := mysql.Config{
 		User:      os.Getenv("MYSQL_USER"),
 		Passwd:    os.Getenv("MYSQL_PASSWORD"),
@@ -59,4 +59,20 @@ func (m *MySql) Query(query string) (*sql.Rows, error) {
 		return nil, err
 	}
 	return rows, nil
+}
+
+func (m *MySql) Exec(query string, args ...any) (sql.Result, error) {
+	r, err := m.db.Exec(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func (m *MySql) QueryRow(query string, args ...any) (*sql.Row, error) {
+	row := m.db.QueryRow(query, args...)
+	if row.Err() != nil {
+		return nil, row.Err()
+	}
+	return row, nil
 }
