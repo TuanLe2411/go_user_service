@@ -78,7 +78,9 @@ func Run() {
 
 	// Middleware cho toàn bộ router
 	router.Use(
-		middleware.NewMonitorMiddleware().Do,
+		middleware.XssProtectionMiddleware,
+		middleware.CorsMiddleware,
+		middleware.MonitorMiddleware,
 		middleware.ErrorHandlerMiddleware,
 	)
 
