@@ -2,6 +2,7 @@ package driver
 
 import (
 	"fmt"
+	"go-service-demo/internal/drivers/app_controller"
 	"go-service-demo/internal/drivers/auth_controller"
 	"go-service-demo/internal/drivers/user_controller"
 	"go-service-demo/internal/middleware"
@@ -75,6 +76,8 @@ func Run() {
 	log.Println("Connect to rabbitmq successfully")
 
 	router := mux.NewRouter()
+	appController := app_controller.AppController{}
+	router.HandleFunc("/health", appController.HealthCheck).Methods(constant.GetMethod)
 
 	// Middleware cho toàn bộ router
 	router.Use(

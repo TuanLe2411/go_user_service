@@ -18,7 +18,7 @@ func NewUserRepo(db database.Database) repositories.UserRepo {
 
 func (u *UserRepoImpl) FindAll() ([]model.User, error) {
 	query := "SELECT id, age, name, date_of_birth, username, email FROM user where is_verified = true"
-	rows, err := u.db.Query(query)
+	rows, err := u.db.QueryRows(query)
 	if err != nil {
 		return nil, err
 	}
