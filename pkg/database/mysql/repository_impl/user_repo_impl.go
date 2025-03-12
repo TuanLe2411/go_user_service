@@ -1,6 +1,7 @@
 package repository_impl
 
 import (
+	"fmt"
 	"go-service-demo/internal/model"
 	"go-service-demo/internal/repositories"
 	"go-service-demo/pkg/database"
@@ -18,7 +19,8 @@ func NewUserRepo(db database.Database) repositories.UserRepo {
 
 func (u *UserRepoImpl) FindAll() ([]model.User, error) {
 	query := "SELECT id, age, name, date_of_birth, username, email FROM user where is_verified = true"
-	rows, err := u.db.QueryRows(query)
+	rows, err, cancel := u.db.QueryRows(query)
+	defer cancel()
 	if err != nil {
 		return nil, err
 	}
@@ -36,13 +38,15 @@ func (u *UserRepoImpl) FindAll() ([]model.User, error) {
 
 func (u *UserRepoImpl) Insert(user model.User) error {
 	query := "INSERT INTO user (age, name, date_of_birth, password, username, email) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.Password, user.Username, user.Email)
+	_, err, cancel := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.Password, user.Username, user.Email)
+	defer cancel()
 	return err
 }
 
 func (u *UserRepoImpl) DeleteByUsername(username string) error {
 	query := "DELETE FROM user WHERE username = ?"
-	_, err := u.db.Exec(query, username)
+	_, err, cancel := u.db.Exec(query, username)
+	defer cancel()
 	if err != nil {
 		return err
 	}
@@ -51,7 +55,8 @@ func (u *UserRepoImpl) DeleteByUsername(username string) error {
 
 func (u *UserRepoImpl) FindByUsername(username string) (model.User, error) {
 	query := "SELECT id, age, name, date_of_birth, username, is_verified, email FROM user WHERE username = ?"
-	row, err := u.db.QueryRow(query, username)
+	row, err, cancel := u.db.QueryRow(query, username)
+	defer cancel()
 	if err != nil {
 		return model.User{}, err
 	}
@@ -64,9 +69,11 @@ func (u *UserRepoImpl) FindByUsername(username string) (model.User, error) {
 }
 
 func (u *UserRepoImpl) FindPasswordByUsername(username string) (string, error) {
-	query := "SELECT password FROM user WHERE username = ?"
-	row, err := u.db.QueryRow(query, username)
+	query := "select user.password from user where username = ?"
+	row, err, cancel := u.db.QueryRow(query, username)
+	defer cancel()
 	if err != nil {
+		fmt.Println(err)
 		return "", err
 	}
 	var password string
@@ -78,7 +85,8 @@ func (u *UserRepoImpl) FindPasswordByUsername(username string) (string, error) {
 
 func (u *UserRepoImpl) UpdateByUsername(user model.User) error {
 	query := "UPDATE user SET age = ?, name = ?, date_of_birth = ?, email = ? WHERE username = ?"
-	_, err := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.Email, user.Username)
+	_, err, cancel := u.db.Exec(query, user.Age, user.Name, user.DateOfBirth, user.Email, user.Username)
+	defer cancel()
 	if err != nil {
 		return err
 	}
@@ -87,6 +95,7 @@ func (u *UserRepoImpl) UpdateByUsername(user model.User) error {
 
 func (u *UserRepoImpl) VerifyUserByUsername(username string) error {
 	query := "UPDATE user SET is_verified = true WHERE username = ?"
-	_, err := u.db.Exec(query, username)
+	_, err, cancel := u.db.Exec(query, username)
+	defer cancel()
 	return err
 }

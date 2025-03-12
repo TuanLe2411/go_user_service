@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"go-service-demo/internal/model"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -64,10 +63,7 @@ func (r *RedisDatabase) Del(key string) error {
 	return r.redis.Del(ctx, key).Err()
 }
 
-func (r *RedisDatabase) SaveUserToRedis(key string, user model.User) {
+func (r *RedisDatabase) SaveUserToRedis(key string, user model.User) error {
 	bytes, _ := json.Marshal(user)
-	err := r.Set(key, string(bytes), 300000)
-	if err != nil {
-		log.Println("Error when set redis: " + err.Error())
-	}
+	return r.Set(key, string(bytes), 300000)
 }

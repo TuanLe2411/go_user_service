@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"go-service-demo/internal/model"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,7 +15,8 @@ type Jwt struct {
 }
 
 type Claims struct {
-	UserId string
+	UserId   int64
+	Username string
 	jwt.RegisteredClaims
 }
 
@@ -32,9 +34,10 @@ func NewJwt(
 	}
 }
 
-func (j *Jwt) GenerateAccessToken(userId string) (string, error) {
+func (j *Jwt) GenerateAccessToken(user model.User) (string, error) {
 	claims := &Claims{
-		UserId: userId,
+		UserId:   user.Id,
+		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.tokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -43,9 +46,10 @@ func (j *Jwt) GenerateAccessToken(userId string) (string, error) {
 	return generateTokenWithKey(j.tokenSigningKey, claims)
 }
 
-func (j *Jwt) GenerateRefreshToken(userId string) (string, error) {
+func (j *Jwt) GenerateRefreshToken(user model.User) (string, error) {
 	claims := &Claims{
-		UserId: userId,
+		UserId:   user.Id,
+		Username: user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.refreshDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

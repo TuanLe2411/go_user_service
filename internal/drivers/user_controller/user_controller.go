@@ -3,6 +3,7 @@ package user_controller
 import (
 	"encoding/json"
 	"go-service-demo/internal/repositories"
+	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database"
 	"go-service-demo/pkg/database/mysql/repository_impl"
 	"go-service-demo/pkg/database/redis"
@@ -25,7 +26,7 @@ func NewUserController(db database.Database, redis *redis.RedisDatabase) *UserCo
 }
 
 func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("user_id")
+	username := r.Header.Get(constant.UsernameHeaderKey)
 	userInRedis, err := u.redis.Get(redis.GetUserKey(username))
 	if err == nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -67,7 +68,7 @@ func (u *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("user_id")
+	username := r.Header.Get(constant.UsernameHeaderKey)
 
 	var updateUser object.UpdateUser
 	err := json.NewDecoder(r.Body).Decode(&updateUser)
@@ -95,7 +96,7 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("user_id")
+	username := r.Header.Get(constant.UsernameHeaderKey)
 
 	err := u.userRepo.DeleteByUsername(username)
 	if err != nil {

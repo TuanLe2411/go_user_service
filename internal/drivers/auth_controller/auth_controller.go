@@ -2,28 +2,30 @@ package auth_controller
 
 import (
 	"encoding/json"
+	"go-service-demo/internal/model"
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database"
 	"go-service-demo/pkg/database/mysql/repository_impl"
+	"go-service-demo/pkg/database/redis"
 	"go-service-demo/pkg/messaging_system"
 	"go-service-demo/pkg/object"
 	"go-service-demo/pkg/utils"
 	"log"
 	"net/http"
-	"strconv"
 )
 
 type AuthController struct {
 	*AuthService
 }
 
-func NewAuthController(db database.Database, jwt *utils.Jwt, rabbitMq *messaging_system.RabbitMQ) *AuthController {
+func NewAuthController(db database.Database, jwt *utils.Jwt, rabbitMq *messaging_system.RabbitMQ, redis *redis.RedisDatabase) *AuthController {
 	return &AuthController{
 		AuthService: &AuthService{
 			rabbitMq:              rabbitMq,
 			userRepo:              repository_impl.NewUserRepo(db),
 			userAccountActionRepo: repository_impl.NewUserAccountActionRepoImpl(db),
 			jwt:                   jwt,
+			redis:                 redis,
 		},
 	}
 }
@@ -38,7 +40,13 @@ func (a *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	user, err := a.userRepo.FindByUsername(loginUser.Username)
+	var user model.User
+	cachedUser, err := a.redis.Get(redis.GetUserKey(loginUser.Username))
+	if err == nil && len(cachedUser) > 0 {
+		_ = json.Unmarshal([]byte(cachedUser), &user)
+	} else {
+		user, err = a.userRepo.FindByUsername(loginUser.Username)
+	}
 	if err != nil {
 		log.Println("Error when find user by username: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
@@ -50,20 +58,27 @@ func (a *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !utils.CheckPasswordHash(loginUser.Password, user.Password) {
+	password, err := a.userRepo.FindPasswordByUsername(loginUser.Username)
+	if err != nil {
+		log.Println("Error when get user password")
+		utils.SetHttpReponseError(r, utils.ErrServerError)
+		return
+	}
+
+	if !utils.CheckPasswordHash(loginUser.Password, password) {
 		log.Println("Username or password is incorrect")
 		utils.SetHttpReponseError(r, utils.ErrUnAuthorized)
 		return
 	}
 
-	token, err := a.jwt.GenerateAccessToken(strconv.Itoa(user.Id))
+	token, err := a.jwt.GenerateAccessToken(user)
 	if err != nil {
 		log.Println("Error when generate access token: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
 
-	refreshToken, err := a.jwt.GenerateRefreshToken(strconv.Itoa(user.Id))
+	refreshToken, err := a.jwt.GenerateRefreshToken(user)
 	if err != nil {
 		log.Println("Error when generate refresh token: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
@@ -122,6 +137,7 @@ func (a *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Password = ""
 
+	go a.redis.SaveUserToRedis(redis.GetUserKey(user.Username), user)
 	go a.sendToMessagingSystem(verifyRequest)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
@@ -146,7 +162,10 @@ func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := a.jwt.GenerateAccessToken(claims.UserId)
+	token, err := a.jwt.GenerateAccessToken(model.User{
+		Id:       claims.UserId,
+		Username: claims.Username,
+	})
 	if err != nil {
 		log.Println("Error when generate access token: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
@@ -180,7 +199,14 @@ func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := a.userRepo.FindByUsername(userAccountAction.Username)
+	var user model.User
+	cachedUser, err := a.redis.Get(redis.GetUserKey(userAccountAction.Username))
+	if err == nil && len(cachedUser) > 0 {
+		_ = json.Unmarshal([]byte(cachedUser), &user)
+	} else {
+		user, err = a.userRepo.FindByUsername(userAccountAction.Username)
+	}
+
 	if err != nil {
 		log.Println("Error when find user by username: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
@@ -188,7 +214,7 @@ func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if user.IsVerified {
 		log.Println("User is already verified")
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		w.Write([]byte("User is verified successfully"))
 		return
 	}
 
@@ -199,5 +225,13 @@ func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
+
+	err = a.redis.SaveUserToRedis(redis.GetUserKey(user.Username), user)
+	if err != nil {
+		log.Println("Error when cached user: " + err.Error())
+		utils.SetHttpReponseError(r, utils.ErrServerError)
+		return
+	}
+
 	w.Write([]byte("User is verified successfully"))
 }

@@ -9,6 +9,10 @@ const (
 
 const UserContextKey contextKey = "user"
 const AppErrorContextKey contextKey = "appError"
+
 const (
 	UserVerifyAction UserAction = "user_verify"
 )
+
+const UsernameHeaderKey string = "username"
+const UserIdHeaderKey string = "user_id"

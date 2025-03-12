@@ -4,6 +4,7 @@ import (
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/utils"
 	"net/http"
+	"strconv"
 )
 
 type JwtMiddleware struct {
@@ -29,8 +30,9 @@ func (j *JwtMiddleware) Do(next http.Handler) http.Handler {
 			utils.SetHttpReponseError(r, utils.ErrUnAuthorized)
 			return
 		}
-
-		r.Header.Set("user_id", claims.UserId)
+		r.Header.Set("user_id", strconv.FormatInt(claims.UserId, 10))
+		r.Header.Set("username", claims.Username)
+		r.Header.Set("username", claims.Username)
 		next.ServeHTTP(w, r)
 	})
 }

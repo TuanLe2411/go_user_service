@@ -18,13 +18,15 @@ func NewUserAccountActionRepoImpl(db database.Database) repositories.UserAccount
 
 func (u *UserAccountActionRepoImpl) Insert(userAccountAction model.UserAccountAction) error {
 	query := "INSERT INTO user_account_action (username, request_id, action, create_at, email) VALUES (?, ?, ?, ?, ?)"
-	_, err := u.db.Exec(query, userAccountAction.Username, userAccountAction.RequestID, userAccountAction.Action, userAccountAction.CreatedAt.Format("2006-01-02 15:04:05"), userAccountAction.Email)
+	_, err, cancel := u.db.Exec(query, userAccountAction.Username, userAccountAction.RequestID, userAccountAction.Action, userAccountAction.CreatedAt.Format("2006-01-02 15:04:05"), userAccountAction.Email)
+	defer cancel()
 	return err
 }
 
 func (u *UserAccountActionRepoImpl) FindByRequestId(requestId string) (model.UserAccountAction, error) {
 	query := "SELECT id, username, request_id, action, create_at, email FROM user_account_action WHERE request_id = ?"
-	row, err := u.db.QueryRow(query, requestId)
+	row, err, cancel := u.db.QueryRow(query, requestId)
+	defer cancel()
 	if err != nil {
 		return model.UserAccountAction{}, err
 	}

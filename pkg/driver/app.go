@@ -90,7 +90,7 @@ func Run() {
 	// Subrouter cho /auth
 	authRouter := router.PathPrefix(authControllerPrefix).Subrouter()
 	authRouter.Use()
-	authController := auth_controller.NewAuthController(sqlDb, jwt, rabbitMq)
+	authController := auth_controller.NewAuthController(sqlDb, jwt, rabbitMq, redis)
 	authRouter.HandleFunc(loginUrl, authController.Login).Methods(constant.PostMethod)
 	authRouter.HandleFunc(registerUrl, authController.Register).Methods(constant.PostMethod)
 	authRouter.HandleFunc(logoutUrl, authController.Logout).Methods(constant.PostMethod)
@@ -99,6 +99,9 @@ func Run() {
 
 	// Subrouter cho /api/v1
 	baseRouter := router.PathPrefix(apiV1Prefix).Subrouter()
+	baseRouter.Use(
+		middleware.NewJwtMiddleware(jwt).Do,
+	)
 
 	// Subrouter cho /api/v1/users
 	userRouter := baseRouter.PathPrefix(userControllerPrefix).Subrouter()

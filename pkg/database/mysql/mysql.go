@@ -57,32 +57,29 @@ func (m *MySql) Ping() error {
 	return m.db.Ping()
 }
 
-func (m *MySql) QueryRows(query string, args ...any) (*sql.Rows, error) {
+func (m *MySql) QueryRows(query string, args ...any) (*sql.Rows, error, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
-	defer cancel()
 	rows, err := m.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, err, cancel
 	}
-	return rows, nil
+	return rows, nil, cancel
 }
 
-func (m *MySql) Exec(query string, args ...any) (sql.Result, error) {
+func (m *MySql) Exec(query string, args ...any) (sql.Result, error, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
-	defer cancel()
 	r, err := m.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, err, cancel
 	}
-	return r, nil
+	return r, nil, cancel
 }
 
-func (m *MySql) QueryRow(query string, args ...any) (*sql.Row, error) {
+func (m *MySql) QueryRow(query string, args ...any) (*sql.Row, error, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
-	defer cancel()
 	row := m.db.QueryRowContext(ctx, query, args...)
 	if row.Err() != nil {
-		return nil, row.Err()
+		return nil, row.Err(), cancel
 	}
-	return row, nil
+	return row, nil, cancel
 }

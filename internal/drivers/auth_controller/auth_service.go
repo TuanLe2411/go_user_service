@@ -5,6 +5,7 @@ import (
 	"go-service-demo/internal/model"
 	"go-service-demo/internal/repositories"
 	"go-service-demo/pkg/constant"
+	"go-service-demo/pkg/database/redis"
 	"go-service-demo/pkg/messaging_system"
 	"go-service-demo/pkg/utils"
 	"time"
@@ -17,6 +18,7 @@ type AuthService struct {
 	userRepo              repositories.UserRepo
 	userAccountActionRepo repositories.UserAccountActionRepo
 	jwt                   *utils.Jwt
+	redis                 *redis.RedisDatabase
 }
 
 func (a *AuthService) createVerifyRequest(user model.User) model.UserAccountAction {
