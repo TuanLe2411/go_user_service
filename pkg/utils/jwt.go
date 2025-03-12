@@ -14,7 +14,7 @@ type Jwt struct {
 }
 
 type Claims struct {
-	Username string `json:"username"`
+	UserId string
 	jwt.RegisteredClaims
 }
 
@@ -32,9 +32,9 @@ func NewJwt(
 	}
 }
 
-func (j *Jwt) GenerateAccessToken(username string) (string, error) {
+func (j *Jwt) GenerateAccessToken(userId string) (string, error) {
 	claims := &Claims{
-		Username: username,
+		UserId: userId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.tokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -43,9 +43,9 @@ func (j *Jwt) GenerateAccessToken(username string) (string, error) {
 	return generateTokenWithKey(j.tokenSigningKey, claims)
 }
 
-func (j *Jwt) GenerateRefreshToken(username string) (string, error) {
+func (j *Jwt) GenerateRefreshToken(userId string) (string, error) {
 	claims := &Claims{
-		Username: username,
+		UserId: userId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.refreshDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

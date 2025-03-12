@@ -30,7 +30,7 @@ func (j *JwtMiddleware) Do(next http.Handler) http.Handler {
 			return
 		}
 
-		r.Header.Set("username", claims.Username)
+		r.Header.Set("user_id", claims.UserId)
 		next.ServeHTTP(w, r)
 	})
 }

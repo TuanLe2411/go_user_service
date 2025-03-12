@@ -99,9 +99,6 @@ func Run() {
 
 	// Subrouter cho /api/v1
 	baseRouter := router.PathPrefix(apiV1Prefix).Subrouter()
-	baseRouter.Use(
-		middleware.NewJwtMiddleware(jwt).Do,
-	)
 
 	// Subrouter cho /api/v1/users
 	userRouter := baseRouter.PathPrefix(userControllerPrefix).Subrouter()

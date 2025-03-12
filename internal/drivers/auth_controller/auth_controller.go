@@ -10,6 +10,7 @@ import (
 	"go-service-demo/pkg/utils"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type AuthController struct {
@@ -55,14 +56,14 @@ func (a *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := a.jwt.GenerateAccessToken(loginUser.Username)
+	token, err := a.jwt.GenerateAccessToken(strconv.Itoa(user.Id))
 	if err != nil {
 		log.Println("Error when generate access token: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
 		return
 	}
 
-	refreshToken, err := a.jwt.GenerateRefreshToken(loginUser.Username)
+	refreshToken, err := a.jwt.GenerateRefreshToken(strconv.Itoa(user.Id))
 	if err != nil {
 		log.Println("Error when generate refresh token: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)
@@ -145,7 +146,7 @@ func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := a.jwt.GenerateAccessToken(claims.Username)
+	token, err := a.jwt.GenerateAccessToken(claims.UserId)
 	if err != nil {
 		log.Println("Error when generate access token: " + err.Error())
 		utils.SetHttpReponseError(r, utils.ErrServerError)

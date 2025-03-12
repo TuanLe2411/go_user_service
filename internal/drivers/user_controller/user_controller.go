@@ -25,7 +25,7 @@ func NewUserController(db database.Database, redis *redis.RedisDatabase) *UserCo
 }
 
 func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("username")
+	username := r.Header.Get("user_id")
 	userInRedis, err := u.redis.Get(redis.GetUserKey(username))
 	if err == nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -67,7 +67,7 @@ func (u *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("username")
+	username := r.Header.Get("user_id")
 
 	var updateUser object.UpdateUser
 	err := json.NewDecoder(r.Body).Decode(&updateUser)
@@ -95,7 +95,7 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("username")
+	username := r.Header.Get("user_id")
 
 	err := u.userRepo.DeleteByUsername(username)
 	if err != nil {
