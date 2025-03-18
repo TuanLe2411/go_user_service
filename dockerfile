@@ -38,6 +38,8 @@ COPY --from=builder /app/user_service .
 # Copy environment files
 COPY .env.* ./
 
+RUN mkdir -p /log && chmod 777 /log
+
 # Use non-root user for better security
 USER appuser
 

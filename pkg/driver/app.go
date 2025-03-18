@@ -1,7 +1,7 @@
 package driver
 
 import (
-	"fmt"
+	"go-service-demo/internal/app_log"
 	"go-service-demo/internal/drivers/app_controller"
 	"go-service-demo/internal/drivers/auth_controller"
 	"go-service-demo/internal/drivers/user_controller"
@@ -12,7 +12,9 @@ import (
 	"go-service-demo/pkg/database/redis"
 	"go-service-demo/pkg/messaging_system"
 	"go-service-demo/pkg/utils"
-	"log"
+
+	"github.com/rs/zerolog/log"
+
 	"net/http"
 	"os"
 	"strconv"
@@ -37,21 +39,23 @@ const verifyUserUrl = "/verify_user"
 
 func Run() {
 	pkg.LoadConfig()
+	app_log.InitLogger()
+
 	sqlDb := mysql.NewMySql()
 	err := sqlDb.Connect()
 	if err != nil {
-		log.Println("Error when connect to db: " + err.Error())
+		log.Error().Err(err).Msg("Error when connect to db")
 		panic(err)
 	}
-	log.Println("Connect to db successfully")
+	log.Info().Msg("Connect to db successfully")
 
 	redis := redis.NewRedisClient()
 	err = redis.Connect()
 	if err != nil {
-		log.Println("Error when connect to redis: " + err.Error())
+		log.Error().Err(err).Msg("Error when connect to redis")
 		panic(err)
 	}
-	log.Println("Connect to redis successfully")
+	log.Info().Msg("Connect to redis successfully")
 
 	jwtAccessTokenTtl, _ := strconv.Atoi(os.Getenv("JWT_ACCESS_TOKEN_TTL_S"))
 	jwtRefreshTokenTtl, _ := strconv.Atoi(os.Getenv("JWT_REFRESH_TOKEN_TTL_S"))
@@ -70,10 +74,10 @@ func Run() {
 	}
 	err = rabbitMq.Connect()
 	if err != nil {
-		log.Println("Error when connect to rabbitmq: " + err.Error())
+		log.Error().Err(err).Msg("Error when connect to rabbitmq")
 		panic(err)
 	}
-	log.Println("Connect to rabbitmq successfully")
+	log.Info().Msg("Connect to rabbitmq successfully")
 
 	router := mux.NewRouter()
 	appController := app_controller.AppController{}
@@ -99,9 +103,6 @@ func Run() {
 
 	// Subrouter cho /api/v1
 	baseRouter := router.PathPrefix(apiV1Prefix).Subrouter()
-	baseRouter.Use(
-		middleware.NewJwtMiddleware(jwt).Do,
-	)
 
 	// Subrouter cho /api/v1/users
 	userRouter := baseRouter.PathPrefix(userControllerPrefix).Subrouter()
@@ -111,6 +112,6 @@ func Run() {
 	userRouter.HandleFunc(deleteUser, userController.DeleteUser).Methods(constant.DeleteMethod)
 	userRouter.HandleFunc(updateUser, userController.UpdateUser).Methods(constant.PutMethod)
 
-	fmt.Println("Server is running on port: " + os.Getenv("SERVER_PORT"))
+	log.Info().Msgf("Server is running on port: %s", os.Getenv("SERVER_PORT"))
 	http.ListenAndServe(":"+os.Getenv("SERVER_PORT"), router)
 }

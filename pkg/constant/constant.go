@@ -9,6 +9,7 @@ const (
 
 const UserContextKey contextKey = "user"
 const AppErrorContextKey contextKey = "appError"
+const TrackingIdContextKey contextKey = "trackingId"
 
 const (
 	UserVerifyAction UserAction = "user_verify"

@@ -1,10 +1,10 @@
 package pkg
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 )
 
 func LoadConfig() {
@@ -20,11 +20,11 @@ func LoadConfig() {
 	case "development":
 		envFile = ".env.development"
 	default:
-		log.Fatalf("ENV không hợp lệ: %s. Chỉ hỗ trợ 'development' hoặc 'production'", env)
+		log.Fatal().Msgf("ENV không hợp lệ: %s. Chỉ hỗ trợ 'development' hoặc 'production'", env)
 	}
 
 	err := godotenv.Load(envFile)
 	if err != nil {
-		log.Fatalf("Lỗi khi load file %s: %v", envFile, err)
+		log.Fatal().Err(err).Str("file", envFile).Msg("Lỗi khi load file env")
 	}
 }

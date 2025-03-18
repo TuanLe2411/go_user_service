@@ -2,11 +2,11 @@ package messaging_system
 
 import (
 	"context"
-	"log"
 	"os"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/rs/zerolog/log"
 )
 
 type RabbitMQ struct {
@@ -21,8 +21,11 @@ func (r *RabbitMQ) Connect() error {
 	connString := r.Protocol + "://" + r.Username + ":" + r.Password + "@" + r.Url
 	conn, err := amqp.Dial(connString)
 	if err != nil {
+		log.Error().Err(err).Str("url", connString).Msg("Failed to connect to RabbitMQ")
 		return err
 	}
+	log.Info().Str("url", connString).Msg("Connected to RabbitMQ")
+
 	r.conn = conn
 	return r.init()
 }
@@ -30,6 +33,7 @@ func (r *RabbitMQ) Connect() error {
 func (r *RabbitMQ) init() error {
 	channel, err := r.conn.Channel()
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to open RabbitMQ channel")
 		return err
 	}
 	defer channel.Close()
@@ -74,7 +78,7 @@ func (r *RabbitMQ) init() error {
 func (r *RabbitMQ) Publish(msg []byte) error {
 	ch, err := r.conn.Channel()
 	if err != nil {
-		log.Println("Error creating channel: " + err.Error())
+		log.Error().Err(err).Msg("Error creating channel")
 		return err
 	}
 	defer ch.Close()
@@ -96,9 +100,9 @@ func (r *RabbitMQ) Publish(msg []byte) error {
 		},
 	)
 	if err != nil {
-		log.Println("Error when publish message: " + string(msg) + " ,err: " + err.Error())
+		log.Error().Err(err).Str("message", string(msg)).Msg("Error when publishing message")
 		return err
 	}
-	log.Println("Publish message successfully, message: " + string(msg))
+	log.Info().Str("message", string(msg)).Msg("Published message successfully")
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/rs/zerolog/log"
 )
 
 type MySql struct {
@@ -37,6 +38,7 @@ func NewMySql() database.Database {
 func (m *MySql) Connect() error {
 	db, err := sql.Open("mysql", m.conn)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to connect to MySQL database")
 		return err
 	}
 	m.db = db
@@ -46,40 +48,53 @@ func (m *MySql) Connect() error {
 	maxIdConst, _ := strconv.Atoi(os.Getenv("MYSQL_POOL_MAX_IDLE_CONNECTION"))
 	db.SetMaxIdleConns(maxIdConst)
 	db.SetMaxOpenConns(maxOpenCons)
+	log.Info().Msg("Connected to MySQL database")
 	return m.Ping()
 }
 
 func (m *MySql) Close() error {
-	return m.db.Close()
+	err := m.db.Close()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to close MySQL database connection")
+		return err
+	}
+	log.Info().Msg("Closed MySQL database connection")
+	return nil
 }
 
 func (m *MySql) Ping() error {
-	return m.db.Ping()
+	err := m.db.Ping()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to ping MySQL database")
+		return err
+	}
+	log.Info().Msg("Pinged MySQL database successfully")
+	return nil
 }
 
-func (m *MySql) QueryRows(query string, args ...any) (*sql.Rows, error, context.CancelFunc) {
+func (m *MySql) QueryRows(query string, args ...any) (*sql.Rows, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	rows, err := m.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err, cancel
+		return nil, cancel, err
 	}
-	return rows, nil, cancel
+	return rows, cancel, nil
 }
 
-func (m *MySql) Exec(query string, args ...any) (sql.Result, error, context.CancelFunc) {
+func (m *MySql) Exec(query string, args ...any) (sql.Result, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	r, err := m.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, err, cancel
+		return nil, cancel, err
 	}
-	return r, nil, cancel
+	return r, cancel, nil
 }
 
-func (m *MySql) QueryRow(query string, args ...any) (*sql.Row, error, context.CancelFunc) {
+func (m *MySql) QueryRow(query string, args ...any) (*sql.Row, context.CancelFunc, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.queryTimeout)
 	row := m.db.QueryRowContext(ctx, query, args...)
 	if row.Err() != nil {
-		return nil, row.Err(), cancel
+		return nil, cancel, row.Err()
 	}
-	return row, nil, cancel
+	return row, cancel, nil
 }

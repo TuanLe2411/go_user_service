@@ -2,6 +2,7 @@ package auth_controller
 
 import (
 	"encoding/json"
+	"errors"
 	"go-service-demo/internal/model"
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database"
@@ -10,15 +11,21 @@ import (
 	"go-service-demo/pkg/messaging_system"
 	"go-service-demo/pkg/object"
 	"go-service-demo/pkg/utils"
-	"log"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 )
 
 type AuthController struct {
 	*AuthService
 }
 
-func NewAuthController(db database.Database, jwt *utils.Jwt, rabbitMq *messaging_system.RabbitMQ, redis *redis.RedisDatabase) *AuthController {
+func NewAuthController(
+	db database.Database,
+	jwt *utils.Jwt,
+	rabbitMq *messaging_system.RabbitMQ,
+	redis *redis.RedisDatabase,
+) *AuthController {
 	return &AuthController{
 		AuthService: &AuthService{
 			rabbitMq:              rabbitMq,
@@ -31,11 +38,15 @@ func NewAuthController(db database.Database, jwt *utils.Jwt, rabbitMq *messaging
 }
 
 func (a *AuthController) Login(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	var loginUser object.UserLogin
 	err := json.NewDecoder(r.Body).Decode(&loginUser)
 	if err != nil {
-		log.Println("Error when parse JSON: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when parse UserLogin object: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, err)
 		return
 	}
 	defer r.Body.Close()
@@ -48,40 +59,60 @@ func (a *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		user, err = a.userRepo.FindByUsername(loginUser.Username)
 	}
 	if err != nil {
-		log.Println("Error when find user by username: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when find user by username: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 	if !user.IsVerified {
-		log.Println("User is not verified")
-		utils.SetHttpReponseError(r, utils.ErrUnAuthorized)
+		msg := "user is not verified"
+		log.Info().
+			Str("trackingId", trackingId).
+			Str("error", msg).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrUnAuthorized, errors.New(msg))
 		return
 	}
 
 	password, err := a.userRepo.FindPasswordByUsername(loginUser.Username)
 	if err != nil {
-		log.Println("Error when get user password")
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when find user password: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
 	if !utils.CheckPasswordHash(loginUser.Password, password) {
-		log.Println("Username or password is incorrect")
-		utils.SetHttpReponseError(r, utils.ErrUnAuthorized)
+		msg := "username or password is incorrect"
+		log.Info().
+			Str("trackingId", trackingId).
+			Str("error", msg).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrUnAuthorized, errors.New(msg))
 		return
 	}
 
 	token, err := a.jwt.GenerateAccessToken(user)
 	if err != nil {
-		log.Println("Error when generate access token: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when generate access token: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
 	refreshToken, err := a.jwt.GenerateRefreshToken(user)
 	if err != nil {
-		log.Println("Error when generate refresh token: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when generate refresh token: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
@@ -93,46 +124,65 @@ func (a *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthController) Register(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	var registerUser object.RegisterUser
 	err := json.NewDecoder(r.Body).Decode(&registerUser)
 	if err != nil {
-		log.Println("Error when parse JSON: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when parse RegisterUser object: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, err)
 		return
 	}
 	defer r.Body.Close()
 
 	existedUser, err := a.userRepo.FindByUsername(registerUser.Username)
 	if err != nil {
-		log.Println("Error when find user by username: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when find user by username: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 	if existedUser.IsExisted() {
-		log.Println("Username is existed")
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		log.Info().
+			Str("trackingId", trackingId).
+			Str("error", "username is already existed").
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, err)
 		return
 	}
 
 	user, err := registerUser.ToUser()
 	if err != nil {
-		log.Println("Error when convert register user to user: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when convert register user to user: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, err)
 		return
 	}
 
 	verifyRequest := a.createVerifyRequest(user)
 	err = a.userAccountActionRepo.Insert(verifyRequest)
 	if err != nil {
-		log.Println("Error when insert verify request: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when insert verify request: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
 	err = a.userRepo.Insert(user)
 	if err != nil {
-		log.Println("Error when insert user: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when insert user: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 	user.Password = ""
@@ -146,19 +196,26 @@ func (a *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 func (a *AuthController) Logout(w http.ResponseWriter, r *http.Request) {}
 
 func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	var refreshToken object.RefreshToken
 	err := json.NewDecoder(r.Body).Decode(&refreshToken)
 	if err != nil {
-		log.Println("Error when parse JSON: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when parse JSON: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, err)
 		return
 	}
 	defer r.Body.Close()
 
 	isValid, claims := a.jwt.ValidateRefreshToken(refreshToken.RefreshToken)
 	if !isValid {
-		log.Println("Invalid refresh token")
-		utils.SetHttpReponseError(r, utils.ErrUnAuthorized)
+		log.Info().
+			Str("trackingId", trackingId).
+			Str("error", "Invalid refresh token").
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrUnAuthorized, err)
 		return
 	}
 
@@ -167,8 +224,11 @@ func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		Username: claims.Username,
 	})
 	if err != nil {
-		log.Println("Error when generate access token: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when generate access token: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
@@ -176,26 +236,41 @@ func (a *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	token := r.URL.Query().Get("token")
 	if len(token) == 0 {
-		log.Println("Token is empty")
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		msg := "token is empty"
+		log.Info().
+			Str("trackingId", trackingId).
+			Str("error", msg).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, errors.New(msg))
 		return
 	}
 	userAccountAction, err := a.userAccountActionRepo.FindByRequestId(token)
 	if err != nil {
-		log.Println("Error when find user account action by request id: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when find user account action by request id: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 	if !userAccountAction.IsExisted() {
-		log.Println("User account action is not existed")
-		utils.SetHttpReponseError(r, utils.ErrNotFound)
+		log.Info().
+			Str("trackingId", trackingId).
+			Str("error", "user account action is not existed").
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrNotFound, err)
 		return
 	}
 	if userAccountAction.Action != constant.UserVerifyAction {
-		log.Println("Invalid action")
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		msg := "invalid action"
+		log.Info().
+			Str("trackingId", trackingId).
+			Str("error", msg).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, errors.New(msg))
 		return
 	}
 
@@ -208,12 +283,15 @@ func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		log.Println("Error when find user by username: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when find user by username: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
+
 	if user.IsVerified {
-		log.Println("User is already verified")
 		w.Write([]byte("User is verified successfully"))
 		return
 	}
@@ -221,15 +299,21 @@ func (a *AuthController) VerifyUser(w http.ResponseWriter, r *http.Request) {
 	user.IsVerified = true
 	err = a.userRepo.VerifyUserByUsername(user.Username)
 	if err != nil {
-		log.Println("Error when update user: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when update user: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
 	err = a.redis.SaveUserToRedis(redis.GetUserKey(user.Username), user)
 	if err != nil {
-		log.Println("Error when cached user: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when cached user: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 

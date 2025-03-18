@@ -3,6 +3,7 @@ package middleware
 import (
 	"encoding/json"
 	"go-service-demo/pkg/constant"
+	"go-service-demo/pkg/object"
 	"go-service-demo/pkg/utils"
 	"net/http"
 )
@@ -13,7 +14,10 @@ func ErrorHandlerMiddleware(next http.Handler) http.Handler {
 
 		if err, ok := r.Context().Value(constant.AppErrorContextKey).(utils.AppError); ok {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(err)
+			json.NewEncoder(w).Encode(object.ApiResponse{
+				Code:    err.Code,
+				Message: err.Message,
+			})
 		}
 	})
 }

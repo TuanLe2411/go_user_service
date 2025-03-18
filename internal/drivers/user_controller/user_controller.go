@@ -2,6 +2,7 @@ package user_controller
 
 import (
 	"encoding/json"
+	"errors"
 	"go-service-demo/internal/repositories"
 	"go-service-demo/pkg/constant"
 	"go-service-demo/pkg/database"
@@ -9,8 +10,9 @@ import (
 	"go-service-demo/pkg/database/redis"
 	"go-service-demo/pkg/object"
 	"go-service-demo/pkg/utils"
-	"log"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 )
 
 type UserController struct {
@@ -18,7 +20,10 @@ type UserController struct {
 	redis    *redis.RedisDatabase
 }
 
-func NewUserController(db database.Database, redis *redis.RedisDatabase) *UserController {
+func NewUserController(
+	db database.Database,
+	redis *redis.RedisDatabase,
+) *UserController {
 	return &UserController{
 		userRepo: repository_impl.NewUserRepo(db),
 		redis:    redis,
@@ -26,6 +31,7 @@ func NewUserController(db database.Database, redis *redis.RedisDatabase) *UserCo
 }
 
 func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	username := r.Header.Get(constant.UsernameHeaderKey)
 	userInRedis, err := u.redis.Get(redis.GetUserKey(username))
 	if err == nil {
@@ -36,8 +42,11 @@ func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := u.userRepo.FindByUsername(username)
 	if err != nil {
-		log.Println("Error when find user by username: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when find user by username: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
@@ -50,15 +59,23 @@ func (u *UserController) GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	users, err := u.userRepo.FindAll()
 	if err != nil {
-		log.Println("Error when find all users: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when find all users: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 	if len(users) == 0 {
-		log.Println("No user found")
-		utils.SetHttpReponseError(r, utils.ErrNotFound)
+		msg := "no user found"
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", msg).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrNotFound, errors.New(msg))
 		return
 	}
 
@@ -68,13 +85,17 @@ func (u *UserController) GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	username := r.Header.Get(constant.UsernameHeaderKey)
 
 	var updateUser object.UpdateUser
 	err := json.NewDecoder(r.Body).Decode(&updateUser)
 	if err != nil {
-		log.Println("Error when parse JSON: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrBadRequest)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when parse JSON: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrBadRequest, err)
 		return
 	}
 	defer r.Body.Close()
@@ -83,8 +104,11 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	user.Username = username
 	err = u.userRepo.UpdateByUsername(user)
 	if err != nil {
-		log.Println("Error when update user: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when update user: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
@@ -96,20 +120,28 @@ func (u *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UserController) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	trackingId := r.Context().Value(constant.TrackingIdContextKey).(string)
 	username := r.Header.Get(constant.UsernameHeaderKey)
 
 	err := u.userRepo.DeleteByUsername(username)
 	if err != nil {
-		log.Println("Error when delete user: " + err.Error())
-		utils.SetHttpReponseError(r, utils.ErrServerError)
+		log.Error().
+			Str("trackingId", trackingId).
+			Str("error", "Error when delete user: "+err.Error()).
+			Msg("")
+		utils.SetHttpReponseError(r, utils.ErrServerError, err)
 		return
 	}
 
-	// Delete user info in redis
-	err = u.redis.Del(redis.GetUserKey(username))
-	if err != nil {
-		log.Println("Error when delete user in redis: " + err.Error())
-	}
+	go func() {
+		err = u.redis.Del(redis.GetUserKey(username))
+		if err != nil {
+			log.Error().
+				Str("trackingId", trackingId).
+				Str("error", "Error when delete user in redis: "+err.Error()).
+				Msg("")
+		}
+	}()
 
 	w.WriteHeader(http.StatusNoContent)
 }
