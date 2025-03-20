@@ -42,7 +42,7 @@ jobs:
         context: .
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/user_service:latest
-        platforms: linux/arm64,linux/amd64
+        platforms: linux/arm64
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
