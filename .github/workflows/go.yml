@@ -5,6 +5,7 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+    types: [opened, synchronize, reopened]
 
 jobs:
 
@@ -24,7 +25,7 @@ jobs:
       with:
         path: |
           ~/.cache/go-build
-          ~/go/pkg/mod
+          ${{ env.GOMODCACHE }}
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
@@ -35,26 +36,30 @@ jobs:
         go-version: '1.24.0'
 
     - name: Build
-      run: go build ./cmd/main/main.go
+      run: go build -o user_service ./cmd/main/main.go
 
     - name: Test
       run: go test -v ./...
 
     - name: Login to Docker Hub
+      if: success()
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Set up Docker Buildx
+      if: success()
       uses: docker/setup-buildx-action@v3
 
     - name: Build and Push Docker Image
+      if: success()
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/user_service:latest
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/user_service:latest
         platforms: ${{ matrix.platform }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
